@@ -11,25 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: 🐍 Setup Node.js
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm' # (1) Added NPM caching
         
-    - name: 📦 Install Dependencies
+    - name: Install Dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
         npm install
-        # (2) Optimized: Removed 'sudo apt-get update' and redundant installs.
-        # playwright install-deps ensures minimal required system libraries for the browser.
-        npx playwright install-deps chromium
+        npx playwright install-deps chrome
       
-    - name: 🚀 Run Renew Script
+    - name: Run Renew Script
       env:
         # 将 USERS_JSON 配置在 GitHub Repository Secrets 中
+        # 格式: [{"username": "xxx", "password": "xxx"}, ...]
         USERS_JSON: ${{ secrets.USERS_JSON }}
         HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -39,7 +38,7 @@ jobs:
       # 使用 xvfb-run 模拟有头环境运行
       run: xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" node action_renew.js
 
-    - name: 📸 Upload Screenshots
+    - name: Upload Screenshots
       if: always()
       uses: actions/upload-artifact@v4
       with:
