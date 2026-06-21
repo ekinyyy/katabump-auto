@@ -46,12 +46,18 @@ async function sendPushDeerMessage(text) {
         const url = 'https://api2.pushdeer.com/message/push';
         const ts = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
         const fullMessage = `🔄 KataBump 续期通知\n\n时间: ${ts}\n\n${text}`;
-        await axios.post(url, `pushkey=${PUSHDEER_KEY}&text=${encodeURIComponent(fullMessage)}`, {
+        
+        // Use URLSearchParams for application/x-www-form-urlencoded
+        const params = new URLSearchParams();
+        params.append('pushkey', PUSHDEER_KEY);
+        params.append('text', fullMessage);
+        
+        await axios.post(url, params.toString(), {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         console.log('[PushDeer] Message sent.');
     } catch (e) {
-        console.error('[PushDeer] Failed to send message:', e.message);
+        console.error('[PushDeer] Failed to send message:', e.response ? e.response.data : e.message);
     }
 }
 
