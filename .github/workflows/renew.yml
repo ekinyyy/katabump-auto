@@ -1,6 +1,7 @@
 name: Katabump Auto Renew
 
 on:
+  push:
   schedule:
     # 每天 HKT 2:30 PM (UTC 6:30 AM) 运行
     - cron: '30 6 * * *'
