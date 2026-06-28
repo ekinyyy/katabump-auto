@@ -1,1 +1,1 @@
-import './src/bridge/server.js';
+// Katabump Automatic Renewal Tool

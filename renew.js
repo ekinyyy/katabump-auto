@@ -39,7 +39,7 @@ if (HTTP_PROXY) {
 // 计算其相对于 Frame 视口的位置比例，并存入 window.__turnstile_data 供外部读取。
 const INJECTED_SCRIPT = `
 (function() {
-    // 只在 iframe 中运行（Turnstile 通常在 iframe 里）
+    // 只在 iframe 中运行（Turnstile 通常 in iframe 里）
     if (window.self === window.top) return;
 
     // 1. 模拟鼠标屏幕坐标 (尝试保留这个优化)
@@ -126,7 +126,7 @@ async function checkProxy() {
         console.log('[Proxy] Connection successful!');
         return true;
     } catch (error) {
-        console.error(`[Proxy] Connection failed: ${error.message}`);
+        console.error(\`[Proxy] Connection failed: \${error.message}\`);
         return false;
     }
 }
@@ -134,7 +134,7 @@ async function checkProxy() {
 // 辅助函数：检测端口是否开放
 function checkPort(port) {
     return new Promise((resolve) => {
-        const req = http.get(`http://localhost:${port}/json/version`, (res) => {
+        const req = http.get(\`http://localhost:\${port}/json/version\`, (res) => {
             resolve(true);
         });
         req.on('error', () => resolve(false));
@@ -152,8 +152,8 @@ async function launchNativeChrome() {
 
     console.log('Launching native Chrome...');
     const args = [
-        `--remote-debugging-port=${DEBUG_PORT}`,
-        `--user-data-dir=${USER_DATA_DIR}`,
+        \`--remote-debugging-port=\${DEBUG_PORT}\`,
+        \`--user-data-dir=\${USER_DATA_DIR}\`,
         '--no-first-run',
         '--no-default-browser-check',
     ];
@@ -161,7 +161,7 @@ async function launchNativeChrome() {
     if (PROXY_CONFIG) {
         // Chrome 命令行只接受 server 地址，认证需要在 playright 层或者插件层处理
         // 这里我们要 strip 掉 username:password
-        args.push(`--proxy-server=${PROXY_CONFIG.server}`);
+        args.push(\`--proxy-server=\${PROXY_CONFIG.server}\`);
         // 确保 Chrome 自身请求 localhost (如 CDP) 不走代理
         args.push('--proxy-bypass-list=<-loopback>');
     }
@@ -228,7 +228,7 @@ async function attemptTurnstileCdp(page) {
                 const clickX = box.x + (box.width * data.xRatio);
                 const clickY = box.y + (box.height * data.yRatio);
 
-                console.log(`>> Calculated absolute click coordinates: (${clickX.toFixed(2)}, ${clickY.toFixed(2)})`);
+                console.log(\`>> Calculated absolute click coordinates: (\${clickX.toFixed(2)}, \${clickY.toFixed(2)})\`);
 
                 // 创建 CDP 会话并发送点击命令
                 const client = await page.context().newCDPSession(page);
@@ -283,15 +283,15 @@ async function attemptTurnstileCdp(page) {
 
     await launchNativeChrome();
 
-    console.log(`Connecting to Chrome instance...`);
+    console.log(\`Connecting to Chrome instance...\`);
     let browser;
     for (let k = 0; k < 5; k++) {
         try {
-            browser = await chromium.connectOverCDP(`http://localhost:${DEBUG_PORT}`);
+            browser = await chromium.connectOverCDP(\`http://localhost:\${DEBUG_PORT}\`);
             console.log('Successfully connected!');
             break;
         } catch (e) {
-            console.log(`Connection attempt ${k + 1} failed. Retrying in 2s...`);
+            console.log(\`Connection attempt \${k + 1} failed. Retrying in 2s...\`);
             await new Promise(r => setTimeout(r, 2000));
         }
     }
@@ -324,7 +324,7 @@ async function attemptTurnstileCdp(page) {
 
     for (let i = 0; i < users.length; i++) {
         const user = users[i];
-        console.log(`\n=== Processing User ${i + 1}/${users.length}: ${user.username} ===`);
+        console.log(\`\\n=== Processing User \${i + 1}/\${users.length}: \${user.username} ===\`);
 
         try {
             if (page.isClosed()) {
@@ -365,7 +365,7 @@ async function attemptTurnstileCdp(page) {
                 for (let findAttempt = 0; findAttempt < 15; findAttempt++) {
                     cdpClickResult = await attemptTurnstileCdp(page);
                     if (cdpClickResult) break;
-                    // console.log(`   >> [Login Find Attempt ${findAttempt + 1}/15] Turnstile checkbox not found yet...`);
+                    // console.log(\`   >> [Login Find Attempt \${findAttempt + 1}/15] Turnstile checkbox not found yet...\`);
                     await page.waitForTimeout(1000);
                 }
 
@@ -402,12 +402,12 @@ async function attemptTurnstileCdp(page) {
                 try {
                     const errorMsg = page.getByText('Incorrect password or no account');
                     if (await errorMsg.isVisible({ timeout: 3000 })) {
-                        console.error(`   >> ❌ Login failed: Incorrect password or no account for user ${user.username}`);
+                        console.error(\`   >> ❌ Login failed: Incorrect password or no account for user \${user.username}\`);
 
                         // Screenshot for login failure
                         const photoDir = path.join(__dirname, 'photo');
                         if (!fs.existsSync(photoDir)) fs.mkdirSync(photoDir, { recursive: true });
-                        try { await page.screenshot({ path: path.join(photoDir, `${user.username}.png`), fullPage: true }); } catch (e) { }
+                        try { await page.screenshot({ path: path.join(photoDir, \`\${user.username}.png\`), fullPage: true }); } catch (e) { }
 
                         // Skip to next user
                         continue;
@@ -439,7 +439,7 @@ async function attemptTurnstileCdp(page) {
 
                 // 1. 如果是重试 (attempt > 1)，说明之前失败了或者刚刷新完页面
                 // 我们直接开始寻找 Renew 按钮
-                console.log(`\n[Attempt ${attempt}/20] Looking for Renew button...`);
+                console.log(\`\\n[Attempt \${attempt}/20] Looking for Renew button...\`);
 
                 const renewBtn = page.getByRole('button', { name: 'Renew', exact: true }).first();
                 try {
@@ -469,7 +469,7 @@ async function attemptTurnstileCdp(page) {
                     for (let findAttempt = 0; findAttempt < 30; findAttempt++) {
                         cdpClickResult = await attemptTurnstileCdp(page);
                         if (cdpClickResult) break;
-                        console.log(`   >> [Find Attempt ${findAttempt + 1}/30] Turnstile checkbox not found yet...`);
+                        console.log(\`   >> [Find Attempt \${findAttempt + 1}/30] Turnstile checkbox not found yet...\`);
                         await page.waitForTimeout(1000);
                     }
 
@@ -502,10 +502,10 @@ async function attemptTurnstileCdp(page) {
                         // User Requested: Screenshot BEFORE final click (Regardless of CDP status)
                         const photoDir = path.join(__dirname, 'photo');
                         if (!fs.existsSync(photoDir)) fs.mkdirSync(photoDir, { recursive: true });
-                        const tsScreenshotName = `${user.username}_Turnstile_${attempt}.png`;
+                        const tsScreenshotName = \`\${user.username}_Turnstile_\${attempt}.png\`;
                         try {
                             await page.screenshot({ path: path.join(photoDir, tsScreenshotName), fullPage: true });
-                            console.log(`   >> 📸 Snapshot saved: ${tsScreenshotName}`);
+                            console.log(\`   >> 📸 Snapshot saved: \${tsScreenshotName}\`);
                         } catch (e) {
                             console.log('   >> Failed to take Turnstile snapshot:', e.message);
                         }
@@ -530,9 +530,9 @@ async function attemptTurnstileCdp(page) {
                                 const notTimeLoc = page.getByText("You can't renew your server yet");
                                 if (await notTimeLoc.isVisible()) {
                                     const text = await notTimeLoc.innerText();
-                                    const match = text.match(/as of\s+(.*?)\s+\(/);
+                                    const match = text.match(/as of\\s+(.*?)\\s+\\(/);
                                     let dateStr = match ? match[1] : 'Unknown Date';
-                                    console.log(`   >> ⏳ Cannot renew yet. Next renewal available as of: ${dateStr}`);
+                                    console.log(\`   >> ⏳ Cannot renew yet. Next renewal available as of: \${dateStr}\`);
 
                                     // Treat this as a "successful" run so we don't retry loop
                                     renewSuccess = true;
@@ -588,21 +588,21 @@ async function attemptTurnstileCdp(page) {
             }
 
         } catch (err) {
-            console.error(`Error processing user ${user.username}:`, err);
+            console.error(\`Error processing user \${user.username}:\`, err);
         }
 
         // Snapshot before handling next user (Normal end of loop)
         const photoDir = path.join(__dirname, 'photo');
         if (!fs.existsSync(photoDir)) fs.mkdirSync(photoDir, { recursive: true });
-        const screenshotPath = path.join(photoDir, `${user.username}.png`);
+        const screenshotPath = path.join(photoDir, \`\${user.username}.png\`);
         try {
             await page.screenshot({ path: screenshotPath, fullPage: true });
-            console.log(`Saved screenshot to: ${screenshotPath}`);
+            console.log(\`Saved screenshot to: \${screenshotPath}\`);
         } catch (e) {
             console.log('Failed to take screenshot:', e.message);
         }
 
-        console.log(`Finished User ${user.username}\n`);
+        console.log(\`Finished User \${user.username}\\n\`);
     }
 
     console.log('All users processed.');

@@ -1,1 +1,16 @@
-{"type":"module"}
+{
+  "name": "katabump-auto",
+  "version": "1.0.0",
+  "description": "Katabump server auto-renewal tool",
+  "type": "module",
+  "scripts": {
+    "renew": "node renew.js",
+    "action": "node action_renew.js"
+  },
+  "dependencies": {
+    "playwright-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "axios": "^1.4.0",
+    "playwright": "^1.35.0"
+  }
+}
