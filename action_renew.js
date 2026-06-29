@@ -3,8 +3,7 @@ const stealth = require('puppeteer-extra-plugin-stealth')();
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { spawn, exec } = require('child_process');
-const http = require('http');
+const { exec } = require('child_process');
 
 const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN;
 const TG_CHAT_ID = process.env.TG_CHAT_ID;
@@ -63,13 +62,6 @@ async function sendPushDeerMessage(text) {
 
 // 启用 stealth 插件
 chromium.use(stealth);
-
-// GitHub Actions 环境下的 Chrome 路径 (通常是 google-chrome)
-const CHROME_PATH = process.env.CHROME_PATH || '/usr/bin/google-chrome';
-const DEBUG_PORT = 9222;
-
-// 确保 localhost 不走代理
-process.env.NO_PROXY = 'localhost,127.0.0.1';
 
 // --- Proxy Configuration ---
 const HTTP_PROXY = process.env.HTTP_PROXY;
@@ -175,60 +167,6 @@ async function checkProxy() {
     }
 }
 
-function checkPort(port) {
-    return new Promise((resolve) => {
-        const req = http.get(`http://localhost:${port}/json/version`, (res) => {
-            resolve(true);
-        });
-        req.on('error', () => resolve(false));
-        req.end();
-    });
-}
-
-async function launchChrome() {
-    console.log('检查 Chrome 是否已在端口 ' + DEBUG_PORT + ' 上运行...');
-    if (await checkPort(DEBUG_PORT)) {
-        console.log('Chrome 已开启。');
-        return;
-    }
-
-    console.log(`正在启动 Chrome (路径: ${CHROME_PATH})...`);
-
-    const args = [
-        `--remote-debugging-port=${DEBUG_PORT}`,
-        '--no-first-run',
-        '--no-default-browser-check',
-        '--disable-gpu',
-        '--window-size=1280,720',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--user-data-dir=/tmp/chrome_user_data'
-    ];
-
-    if (PROXY_CONFIG) {
-        args.push(`--proxy-server=${PROXY_CONFIG.server}`);
-        args.push('--proxy-bypass-list=<-loopback>');
-    }
-    args.push('--disable-dev-shm-usage');
-
-    const chrome = spawn(CHROME_PATH, args, {
-        detached: true,
-        stdio: 'ignore'
-    });
-    chrome.unref();
-
-    console.log('正在等待 Chrome 初始化...');
-    for (let i = 0; i < 20; i++) {
-        if (await checkPort(DEBUG_PORT)) break;
-        await new Promise(r => setTimeout(r, 1000));
-    }
-
-    if (!await checkPort(DEBUG_PORT)) {
-        console.error('Chrome 无法在端口 ' + DEBUG_PORT + ' 上启动');
-        throw new Error('Chrome 启动失败');
-    }
-}
-
 function getUsers() {
     try {
         if (process.env.USERS_JSON) {
@@ -305,39 +243,33 @@ async function attemptTurnstileCdp(page) {
         }
     }
 
-    await launchChrome();
+    console.log(`正在启动浏览器...`);
+    const launchOptions = {
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--window-size=1280,720'
+        ]
+    };
 
-    console.log(`正在连接 Chrome...`);
-    let browser;
-    for (let k = 0; k < 5; k++) {
-        try {
-            browser = await chromium.connectOverCDP(`http://localhost:${DEBUG_PORT}`);
-            console.log('连接成功！');
-            break;
-        } catch (e) {
-            console.log(`连接尝试 ${k + 1} 失败。2秒后重试...`);
-            await new Promise(r => setTimeout(r, 2000));
-        }
-    }
-
-    if (!browser) {
-        console.error('连接失败。退出。');
-        process.exit(1);
-    }
-
-    const context = browser.contexts()[0];
-    let page = context.pages().length > 0 ? context.pages()[0] : await context.newPage();
-    page.setDefaultTimeout(60000);
-
-    if (PROXY_CONFIG && PROXY_CONFIG.username) {
-        console.log('[代理] 正在设置认证...');
-        await context.setHTTPCredentials({
+    if (PROXY_CONFIG) {
+        launchOptions.proxy = {
+            server: PROXY_CONFIG.server,
             username: PROXY_CONFIG.username,
             password: PROXY_CONFIG.password
-        });
-    } else {
-        await context.setHTTPCredentials(null);
+        };
     }
+
+    const browser = await chromium.launch(launchOptions);
+    const context = await browser.newContext({
+        viewport: { width: 1280, height: 720 }
+    });
+
+    let page = await context.newPage();
+    page.setDefaultTimeout(60000);
 
     await page.addInitScript(INJECTED_SCRIPT);
     console.log('注入脚本已添加。');
