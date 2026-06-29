@@ -2,7 +2,6 @@
   "name": "katabump-auto",
   "version": "1.0.0",
   "description": "Katabump server auto-renewal tool",
-  "type": "module",
   "scripts": {
     "renew": "node renew.js",
     "action": "node action_renew.js"
